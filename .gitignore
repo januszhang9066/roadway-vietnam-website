@@ -1,0 +1,53 @@
+# ============================================
+# Roadway Vietnam Website — Git 忽略规则
+# ============================================
+
+# ---------- WordPress 核心 ----------
+/wp-admin/
+/wp-includes/
+/wp-config.php
+/wp-config-*.php
+/xmlrpc.php
+/wp-content/uploads/
+/wp-content/cache/
+/wp-content/upgrade/
+/wp-content/backup-db/
+/wp-content/backups/
+/wp-content/wflogs/
+/wp-content/ai1wm-backups/
+/wp-content/maintenance.php
+
+# ---------- 插件(仓库只留自有代码) ----------
+/wp-content/plugins/
+
+# ---------- 敏感文件 ----------
+.env
+.env.*
+*.key
+*.pem
+*.sql
+*.sql.gz
+secrets*.php
+*credentials*
+*.bak
+*.old
+*.orig
+
+# ---------- 系统文件 ----------
+.DS_Store
+Thumbs.db
+._*
+.Spotlight-V100
+.Trashes
+*.swp
+*~
+
+# ---------- 开发工具 ----------
+.idea/
+.vscode/
+node_modules/
+*.log
+npm-debug.log*
+/.cache/
+```
+
