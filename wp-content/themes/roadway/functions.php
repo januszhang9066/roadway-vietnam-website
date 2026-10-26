@@ -25,6 +25,10 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_script('roadway-nav', get_template_directory_uri() . '/assets/js/nav.js', [], '1.0.0', true);
 });
 
+// Astra 的 header/footer 由本主题接管
+// 不能删:删了 Astra 父主题会自己输出 header/footer,导致双 header/双 footer
+add_action('astra_header_footer', function () {});
+
 // ---------- 关闭不必要的 WP 头 ----------
 remove_action('wp_head', 'wp_generator');
 remove_action('wp_head', 'wlwmanifest_link');
@@ -58,12 +62,59 @@ function rw_f($key, $default = '') {
     return ($v === '' || $v === false) ? $default : $v;
 }
 
-/** 多行字段 → 数组(支持换行或 " / " 分隔) */
+/**
+ * 多行字段 → 数组
+ *
+ * 两种数据格式都要支持(数据库里两种都有):
+ *   A. 多行格式:一行一条,行内用 | 分字段
+ *      适用 stats_items / cap_items / case_items / contact_items
+ *      → 按换行切,行内的 | 留给模板 explode('|')
+ *
+ *   B. 单行格式:整条值用 | 分隔,没有换行
+ *      适用 svc_deliver(每个 | 段就是一条交付物)
+ *      → 按 | 分
+ *
+ * 注意:绝不能按 " / " 切。数据里有 "对接 Lark / Telegram / 企业微信"
+ * 这种内容,按 " / " 切会把一行拦腰截断。
+ */
 function rw_list($key, $default = []) {
     $v = rw_f($key, '');
     if (!$v) return $default;
-    $lines = array_filter(array_map('trim', preg_split('/\n|\s\/\s/', $v)));
-    return array_values($lines);
+    $v = trim($v);
+    if ($v === '') return $default;
+
+    // 有换行 → 多行格式,按行分
+    if (preg_match('/\R/u', $v)) {
+        $lines = array_filter(array_map('trim', preg_split('/\R/u', $v)));
+        return array_values($lines);
+    }
+
+    // 无换行 → 单行格式,按 | 分
+    $parts = array_filter(array_map('trim', explode('|', $v)));
+    return $parts ? array_values($parts) : $default;
+}
+
+/**
+ * 单行多字段字段 → 数组(每行 = 一组 | 分隔的字段)
+ *
+ * 用于 svc_items:数据是「序号|标题|描述|要点1|要点2」,
+ * 但整条值写在一行里、没有换行,所以 rw_list 会把它按 | 拆散。
+ * 这个函数保持整条不拆,由模板 explode('|') 处理字段。
+ */
+function rw_rows($key, $default = []) {
+    $v = rw_f($key, '');
+    if (!$v) return $default;
+    $v = trim($v);
+    if ($v === '') return $default;
+
+    // 有换行 → 已经是多行格式,直接按行分
+    if (preg_match('/\R/u', $v)) {
+        $lines = array_filter(array_map('trim', preg_split('/\R/u', $v)));
+        return array_values($lines);
+    }
+
+    // 单行:整条就是一组字段,包成单元素数组
+    return [$v];
 }
 
 // ---------- 字段 schema(用于后台编辑框) ----------

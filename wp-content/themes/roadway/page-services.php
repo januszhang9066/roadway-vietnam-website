@@ -5,7 +5,7 @@
 get_header();
 $l = rw_lang();
 
-$svc = rw_list('svc_items');
+$svc = rw_rows('svc_items');
 $deliver = rw_list('svc_deliver');
 ?>
 
