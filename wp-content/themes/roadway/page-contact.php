@@ -5,6 +5,10 @@
 get_header();
 $l = rw_lang();
 $items = rw_list('contact_items');
+
+// 提交结果(admin-post 处理后会带 inquiry 参数跳回本页)
+$inquiry_success = isset($_GET['inquiry']) && $_GET['inquiry'] === 'success';
+$inquiry_error   = isset($_GET['inquiry']) && $_GET['inquiry'] === 'error' ? ($_GET['reason'] ?? '') : '';
 ?>
 
 <section class="rw-pagehead">
@@ -71,9 +75,17 @@ $items = rw_list('contact_items');
               : 'Điền biểu mẫu bên dưới, chúng tôi sẽ phản hồi trong 1 ngày làm việc. Dấu * là bắt buộc.')); ?>
         </p>
 
-        <form class="rw-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <form class="rw-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"<?php if ($inquiry_success) echo ' hidden'; ?>>
           <input type="hidden" name="action" value="rw_contact">
+          <?php wp_nonce_field('rw_contact_submit', 'rw_form_nonce'); ?>
           <input type="hidden" name="redirect_to" value="<?php echo esc_url(get_permalink()); ?>">
+          <input type="text" name="company_website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0">
+
+          <?php if ($inquiry_error === 'form'): ?>
+            <p class="rw-alert" role="alert" style="background:#FEF3E2;color:#A55A05;padding:12px 16px;border-radius:8px;margin:0 0 16px"><?php echo esc_html($l === 'zh' ? '表单已过期,请重新提交。' : ($l === 'ko' ? '양식이 만료되었습니다. 다시 제출해 주세요.' : 'Biểu mẫu đã hết hạn, vui lòng gửi lại.')); ?></p>
+          <?php elseif ($inquiry_error === 'required'): ?>
+            <p class="rw-alert" role="alert" style="background:#FEF3E2;color:#A55A05;padding:12px 16px;border-radius:8px;margin:0 0 16px"><?php echo esc_html($l === 'zh' ? '请填写所有带 * 的必填项,并确认邮箱格式正确。' : ($l === 'ko' ? '* 표시 필수 항목을 모두 작성하고 이메일 형식을 확인해 주세요.' : 'Vui lòng điền đủ các mục có dấu * và kiểm tra định dạng email.')); ?></p>
+          <?php endif; ?>
 
           <div class="rw-field">
             <label class="rw-label" for="rw-name">
@@ -124,7 +136,7 @@ $items = rw_list('contact_items');
               placeholder="<?php echo esc_attr($l === 'zh'
                 ? '例:越南线束车间每天靠微信群报产量,想用一句话自动生成报工记录'
                 : ($l === 'ko'
-                  ? '예: 베트남 하네스 공장의 생산량 보고를 그룹챗에 수작업으로 하고 있어, 한마디로 자동 보고서를 만들 want'
+                  ? '예: 베트남 하네스 공장의 생산량 보고를 그룹챗에 수작업으로 하고 있어, 한마디로 자동 보고서를 만들고 싶어'
                   : 'Ví dụ: Xưởng harness Việt Nam báo cáo sản lượng thủ công qua group chat, muốn tự động tạo báo cáo bằng một câu')); ?>"></textarea>
           </div>
 
@@ -140,6 +152,16 @@ $items = rw_list('contact_items');
                 : 'Gửi biểu mẫu đồng nghĩa với việc đồng ý để chúng tôi liên hệ về yêu cầu tư vấn này.')); ?>
           </p>
         </form>
+
+        <?php if ($inquiry_success): ?>
+          <div class="rw-alert" role="status" style="background:#E7F6EE;color:#0A7A44;padding:20px 24px;border-radius:10px;font-weight:600">
+            <?php echo esc_html($l === 'zh'
+              ? '已收到!我们会在 1 个工作日内回复您。'
+              : ($l === 'ko'
+                ? '접수되었습니다! 1영업일 이내에 답변드리겠습니다.'
+                : 'Đã nhận được yêu cầu! Chúng tôi sẽ phản hồi trong 1 ngày làm việc.')); ?>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>

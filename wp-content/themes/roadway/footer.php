@@ -50,11 +50,11 @@ $l = rw_lang();
           <li><a href="mailto:zhang@roadwayvn.com">zhang@roadwayvn.com</a></li>
           <li><a href="https://roadwayvn.com" target="_blank" rel="noopener">roadwayvn.com</a></li>
           <li style="margin-top:16px;color:var(--rw-gray-500);font-size:13.5px;line-height:1.7">
-            <?php echo esc_html($l === 'zh'
+            <?php echo wp_kses($l === 'zh'
               ? '越南北部 · 河内 / 海防 / 太原<br>周一至周六 9:00–18:00 (GMT+7)'
               : ($l === 'ko'
-                ? '베트남 북부 · 하노이 / 하이퐑 / 타이응<br>월–토 9:00–18:00 (GMT+7)'
-                : 'Miền Bắc Việt Nam · Hà Nội / Hải Phòng / Thái Nguyên<br>T2–T7 9:00–18:00 (GMT+7)')); ?>
+                ? '베트남 북부 · 하노이 / 하이퐁 / 타이응우옌<br>월–토 9:00–18:00 (GMT+7)'
+                : 'Miền Bắc Việt Nam · Hà Nội / Hải Phòng / Thái Nguyên<br>T2–T7 9:00–18:00 (GMT+7)'), ['br' => []]); ?>
           </li>
         </ul>
       </div>
