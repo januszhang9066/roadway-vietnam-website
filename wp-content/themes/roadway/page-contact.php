@@ -57,7 +57,7 @@ $inquiry_error   = isset($_GET['inquiry']) && $_GET['inquiry'] === 'error' ? ($_
           <?php echo esc_html($l === 'zh'
             ? '我们在越南北部有本地团队,到厂区实地调研不需要额外差旅费用。首次沟通免费,不签约也能先看方案。'
             : ($l === 'ko'
-              ? '베트남 북부에 자체 팀이 있어 공장 실태 조사에 추가 출장비가 없습니다. 첫 상담은 무료이며, 계약 없이도 먼저方案的을 볼 수 있습니다.'
+              ? '베트남 북부에 자체 팀이 있어 공장 실태 조사에 추가 출장비가 없습니다. 첫 상담은 무료이며, 계약 없이도 먼저 방안을 확인할 수 있습니다.'
               : 'Chúng tôi có đội ngũ tại miền Bắc Việt Nam nên khảo sát nhà máy không mất phí đi lại. Tư vấn đầu tiên miễn phí, xem phương án trước khi ký.')); ?>
         </div>
       </div>
