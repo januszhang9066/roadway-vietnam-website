@@ -16,10 +16,12 @@ function roadway_dev_is_local() {
     if (!$host) {
         return false;
     }
+    // 本地开发端口白名单:与 README(router.php 起在 :8088)保持一致
     return (strpos($host, '127.0.0.1') !== false
          || strpos($host, 'localhost') !== false
          || strpos($host, ':8080') !== false
-         || strpos($host, ':8085') !== false);
+         || strpos($host, ':8085') !== false
+         || strpos($host, ':8088') !== false);
 }
 
 function roadway_dev_home($value) {

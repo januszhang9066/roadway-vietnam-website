@@ -30,7 +30,7 @@
       </span>
     </a>
 
-    <nav class="rw-nav" aria-label="<?php echo esc_attr(rw_lang() === 'zh' ? '主导航' : (rw_lang() === 'ko' ? '주요 메뉴' : 'Điều hướng')); ?>">
+    <nav id="rw-nav" class="rw-nav" aria-label="<?php echo esc_attr(rw_lang() === 'zh' ? '主导航' : (rw_lang() === 'ko' ? '주요 메뉴' : 'Điều hướng')); ?>">
       <?php
       $l = rw_lang();
       $nav = $l === 'zh' ? [
@@ -62,7 +62,7 @@
       </a>
     </div>
 
-    <button class="rw-burger" aria-label="Menu" aria-expanded="false">
+    <button class="rw-burger" id="rw-burger" aria-label="Menu" aria-expanded="false" aria-controls="rw-nav">
       <span></span><span></span><span></span>
     </button>
   </div>

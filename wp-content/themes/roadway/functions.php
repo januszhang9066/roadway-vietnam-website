@@ -21,9 +21,12 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('roadway-style', get_stylesheet_uri(), [], '1.0.0');
     // 内联关键 CSS,减少请求
     wp_add_inline_style('roadway-style', ':root{--rw-ease:cubic-bezier(.4,0,.2,1)}');
+    // 移动端导航(汉堡菜单)交互脚本
+    wp_enqueue_script('roadway-nav', get_template_directory_uri() . '/assets/js/nav.js', [], '1.0.0', true);
 });
 
 // Astra 的 header/footer 由本主题接管
+// 不能删:删了 Astra 父主题会自己输出 header/footer,导致双 header/双 footer
 add_action('astra_header_footer', function () {});
 
 // ---------- 关闭不必要的 WP 头 ----------
@@ -59,29 +62,59 @@ function rw_f($key, $default = '') {
     return ($v === '' || $v === false) ? $default : $v;
 }
 
-/** 多行字段 → 数组 */
+/**
+ * 多行字段 → 数组
+ *
+ * 两种数据格式都要支持(数据库里两种都有):
+ *   A. 多行格式:一行一条,行内用 | 分字段
+ *      适用 stats_items / cap_items / case_items / contact_items
+ *      → 按换行切,行内的 | 留给模板 explode('|')
+ *
+ *   B. 单行格式:整条值用 | 分隔,没有换行
+ *      适用 svc_deliver(每个 | 段就是一条交付物)
+ *      → 按 | 分
+ *
+ * 注意:绝不能按 " / " 切。数据里有 "对接 Lark / Telegram / 企业微信"
+ * 这种内容,按 " / " 切会把一行拦腰截断。
+ */
 function rw_list($key, $default = []) {
     $v = rw_f($key, '');
     if (!$v) return $default;
-    $lines = array_filter(array_map('trim', preg_split('/\n/', $v)));
-    return array_values($lines);
-}
+    $v = trim($v);
+    if ($v === '') return $default;
 
-/** 读取全局字段(不依赖文章) */
-function rw_g($key, $default = '') {
-    $lang = rw_lang();
-    $v = get_option('rw_' . $key . '_' . $lang, '');
-    if ($v === '' || $v === false) {
-        $v = get_option('rw_' . $key, '');
+    // 有换行 → 多行格式,按行分
+    if (preg_match('/\R/u', $v)) {
+        $lines = array_filter(array_map('trim', preg_split('/\R/u', $v)));
+        return array_values($lines);
     }
-    return ($v === '' || $v === false) ? $default : $v;
+
+    // 无换行 → 单行格式,按 | 分
+    $parts = array_filter(array_map('trim', explode('|', $v)));
+    return $parts ? array_values($parts) : $default;
 }
 
-function rw_glist($key, $default = []) {
-    $v = rw_g($key, '');
+/**
+ * 单行多字段字段 → 数组(每行 = 一组 | 分隔的字段)
+ *
+ * 用于 svc_items:数据是「序号|标题|描述|要点1|要点2」,
+ * 但整条值写在一行里、没有换行,所以 rw_list 会把它按 | 拆散。
+ * 这个函数保持整条不拆,由模板 explode('|') 处理字段。
+ */
+function rw_rows($key, $default = []) {
+    $v = rw_f($key, '');
     if (!$v) return $default;
-    $lines = array_filter(array_map('trim', preg_split('/\n/', $v)));
-    return array_values($lines);
+    $v = trim($v);
+    if ($v === '') return $default;
+
+    // 有换行 → 已经是多行格式,直接按行分
+    if (preg_match('/\R/u', $v)) {
+        $lines = array_filter(array_map('trim', preg_split('/\R/u', $v)));
+        return array_values($lines);
+    }
+
+    // 单行:整条就是一组字段,包成单元素数组
+    return [$v];
 }
 
 // ---------- 字段 schema(用于后台编辑框) ----------
@@ -100,13 +133,13 @@ function rw_schema() {
         'stats' => [
             'label' => '数据带',
             'fields' => [
-                ['key' => 'stats_title', 'label' => '标题', 'type' => 'text'],
                 ['key' => 'stats_items', 'label' => '每行一条(数字|说明)', 'type' => 'textarea'],
             ],
         ],
         'capability' => [
             'label' => '核心能力',
             'fields' => [
+                ['key' => 'cap_eyebrow', 'label' => '眉标', 'type' => 'text'],
                 ['key' => 'cap_title', 'label' => '标题', 'type' => 'text'],
                 ['key' => 'cap_desc',  'label' => '描述', 'type' => 'textarea'],
                 ['key' => 'cap_items', 'label' => '每行一条(图标|标题|说明)', 'type' => 'textarea'],
@@ -115,6 +148,7 @@ function rw_schema() {
         'industry' => [
             'label' => '行业矩阵',
             'fields' => [
+                ['key' => 'ind_eyebrow', 'label' => '眉标', 'type' => 'text'],
                 ['key' => 'ind_title', 'label' => '标题', 'type' => 'text'],
                 ['key' => 'ind_desc',  'label' => '描述', 'type' => 'textarea'],
                 ['key' => 'ind_items', 'label' => '每行一条(行业|场景|标签)', 'type' => 'textarea'],
@@ -123,6 +157,7 @@ function rw_schema() {
         'process' => [
             'label' => '实施流程',
             'fields' => [
+                ['key' => 'proc_eyebrow', 'label' => '眉标', 'type' => 'text'],
                 ['key' => 'proc_title', 'label' => '标题', 'type' => 'text'],
                 ['key' => 'proc_desc',  'label' => '描述', 'type' => 'textarea'],
                 ['key' => 'proc_items', 'label' => '每行一条(阶段|标题|说明)', 'type' => 'textarea'],
@@ -131,6 +166,7 @@ function rw_schema() {
         'why' => [
             'label' => '为什么选 Roadway',
             'fields' => [
+                ['key' => 'why_eyebrow', 'label' => '眉标', 'type' => 'text'],
                 ['key' => 'why_title', 'label' => '标题', 'type' => 'text'],
                 ['key' => 'why_desc',  'label' => '描述', 'type' => 'textarea'],
                 ['key' => 'why_items', 'label' => '每行一条(标题|说明)', 'type' => 'textarea'],
@@ -212,11 +248,23 @@ add_action('save_post', function ($post_id, $post, $update) {
     if (!current_user_can('edit_post', $post_id)) return;
     if (!isset($_POST['rw_meta']) || !is_array($_POST['rw_meta'])) return;
 
-    $lang = rw_lang();
+    // 后台编辑语境下 rw_lang() 可能取到前台语言,优先用文章自身语言(Polylang)
+    $lang = rw_post_lang($post_id);
     foreach ($_POST['rw_meta'] as $k => $v) {
         update_post_meta($post_id, '_rw_' . sanitize_key($k) . '_' . $lang, wp_kses_post($v));
     }
 }, 10, 3);
+
+/**
+ * 读取某篇文章所属语言(后台保存时比 pll_current_language 更可靠)
+ */
+function rw_post_lang($post_id) {
+    if (function_exists('pll_get_post_language')) {
+        $l = pll_get_post_language($post_id, 'slug');
+        if ($l) return $l;
+    }
+    return rw_lang();
+}
 
 // ---------- 语言切换器 ----------
 /**
@@ -259,18 +307,12 @@ function rw_lang_switcher() {
     return $out . '</div>';
 }
 
-// ---------- 页面标题(按语言) ----------
-function rw_page_title($key, $default = '') {
-    return rw_f($key, $default);
-}
-
 // ---------- 模板文件注册 ----------
 add_filter('theme_page_templates', function ($templates) {
     return array_merge($templates, [
         'page-services.php' => __('Roadway 服务页', 'roadway'),
         'page-cases.php'    => __('Roadway 案例页', 'roadway'),
         'page-contact.php'  => __('Roadway 联系页', 'roadway'),
-        'page-blog.php'     => __('Roadway 博客页', 'roadway'),
     ]);
 });
 
@@ -304,7 +346,59 @@ function rw_breadcrumb() {
     return $out . '</nav>';
 }
 
-// ---------- 去掉 WordPress 自动段落包裹 ----------
-function rw_strip($html) {
-    return trim($html);
+// ---------- 联系表单处理(admin-post) ----------
+/**
+ * 前端表单 action=rw_contact 提交到 admin-post.php,由这里接收。
+ * 防 spam:honeypot + nonce;入库:post(type=rw_inquiry);通知:admin_email。
+ */
+add_action('admin_post_nopriv_rw_contact', 'rw_handle_contact');
+add_action('admin_post_rw_contact', 'rw_handle_contact');
+function rw_handle_contact() {
+    // honeypot:隐藏字段被填写 → 视为机器人,静默跳回
+    if (!empty($_POST['company_website'])) {
+        wp_safe_redirect(wp_get_referer() ?: home_url('/contact/'));
+        exit;
+    }
+    $nonce_ok = isset($_POST['rw_form_nonce']) && wp_verify_nonce($_POST['rw_form_nonce'], 'rw_contact_submit');
+
+    $name    = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
+    $company = isset($_POST['company']) ? sanitize_text_field(wp_unslash($_POST['company'])) : '';
+    $email   = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
+    $phone   = isset($_POST['phone']) ? sanitize_text_field(wp_unslash($_POST['phone'])) : '';
+    $scale   = isset($_POST['scale']) ? sanitize_text_field(wp_unslash($_POST['scale'])) : '';
+    $message = isset($_POST['message']) ? sanitize_textarea_field(wp_unslash($_POST['message'])) : '';
+
+    $redirect = wp_get_referer() ?: home_url('/contact/');
+    $error    = '';
+
+    if (!$nonce_ok) {
+        $error = 'form';
+    } elseif ($name === '' || $company === '' || $message === '' || !is_email($email)) {
+        $error = 'required';
+    } else {
+        $post_id = wp_insert_post([
+            'post_type'   => 'post',
+            'post_status' => 'private',
+            'post_title'  => sprintf('[询盘] %s · %s · %s', $company, $name, gmdate('Y-m-d H:i')),
+            'post_content' => sprintf(
+                "公司: %s\n姓名: %s\n邮箱: %s\n电话: %s\n工厂规模: %s\n\n需求:\n%s",
+                $company, $name, $email, $phone, $scale, $message
+            ),
+        ]);
+        if (!is_wp_error($post_id)) {
+            update_post_meta($post_id, '_rw_inquiry_email', $email);
+            @wp_mail(get_option('admin_email'),
+                sprintf('Roadway 新询盘:%s(%s)', $company, $name),
+                wp_strip_all_tags((string) get_post_field('post_content', $post_id)));
+        }
+        $redirect = add_query_arg('inquiry', 'success', $redirect);
+    }
+
+    if ($error) {
+        $redirect = add_query_arg(['inquiry' => 'error', 'reason' => $error,
+            'rw_name' => rawurlencode($name), 'rw_company' => rawurlencode($company),
+            'rw_email' => rawurlencode($email)], $redirect);
+    }
+    wp_safe_redirect($redirect);
+    exit;
 }
